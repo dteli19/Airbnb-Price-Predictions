@@ -16,8 +16,9 @@ from tensorflow.keras import layers, models
 # ----------------------------
 # Page Config
 # ----------------------------
-st.set_page_config(page_title="Airbnb Price Prediction (Asheville, NC)", page_icon="🏠", layout="wide")
-st.title("🏠 Airbnb Price Prediction — Asheville, NC (Detailed Workflow)")
+st.set_page_config(page_title="Airbnb Price Prediction — Asheville, NC", page_icon="🏠", layout="wide")
+st.title("🏠 Inside Airbnb: Predicting Prices in Asheville, NC")
+st.caption("An end-to-end machine learning workflow — from data cleaning and EDA to predictive modeling.")
 
 # --- Step Header Styles (drop-in) ---
 STEP_STYLES = """
@@ -121,15 +122,13 @@ digraph G {
   rankdir=LR; nodesep=0.45; ranksep=0.6; splines=true;
   node [shape=box, style="rounded,filled", penwidth=0, fontname="Helvetica", fontsize=11];
 
-  S0 [label="0 • Overview", fillcolor="#14b8a6", fontcolor="white"];
   S1 [label="1 • Data Loading", fillcolor="#0ea5e9", fontcolor="white"];
-  S2 [label="2 • Data Selection\n(Asheville, NC)", fillcolor="#10b981", fontcolor="white"];
-  S3 [label="3 • Preprocessing\nDrop missing price → Clean numerics → Mode-impute superhost", fillcolor="#f59e0b", fontcolor="white"];
-  S4 [label="4 • EDA\nDescribe • Distributions • Pairplot • Correlation • Outliers • Map", fillcolor="#8b5cf6", fontcolor="white"];
-  S5 [label="5 • Modeling\nNormalize + Split + Train (Keras)", fillcolor="#ef4444", fontcolor="white"];
-  S6 [label="Final Results\nMAE • RMSE • R²", fillcolor="#334155", fontcolor="white"];
+  S2 [label="2 • Data Selection", fillcolor="#10b981", fontcolor="white"];
+  S3 [label="3 • Preprocessing", fillcolor="#f59e0b", fontcolor="white"];
+  S4 [label="4 • Exploratory Data Analysis", fillcolor="#8b5cf6", fontcolor="white"];
+  S5 [label="5 • Modeling", fillcolor="#ef4444", fontcolor="white"];
 
-  S0 -> S1 -> S2 -> S3 -> S4 -> S5 -> S6;
+ S1 -> S2 -> S3 -> S4 -> S5;
 }
 """
 st.graphviz_chart(flow)
