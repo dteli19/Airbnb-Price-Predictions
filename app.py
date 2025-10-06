@@ -22,7 +22,7 @@ st.title("🏠 Airbnb Price Prediction — End-to-End (Colab-style)")
 # ----------------------------
 # Helpers
 # ----------------------------
-DATA_PATH = Path("data/listings.csv")  # hardcoded
+DATA_PATH = Path("listings.csv")  # hardcoded
 TARGET = "price"
 
 def clean_price_series(s: pd.Series) -> pd.Series:
