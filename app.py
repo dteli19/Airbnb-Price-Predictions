@@ -115,25 +115,6 @@ Source: *Inside Airbnb `listings.csv`* (city export). Typical fields include:
 5. **Modeling** — Train/test split (80/20), Keras model with **Normalization**, training curves, predictions → **Final Results**
 """)
 
-st.subheader("Workflow — End-to-End Steps")
-flow = r"""
-digraph G {
-  rankdir=LR;
-  node [shape=box, style="rounded,filled", penwidth=0, fontname="Helvetica", fontsize=11];
-
-  S0 [label="0 • Overview", fillcolor="#14b8a6", fontcolor="white"];
-  S1 [label="1 • Data Loading", fillcolor="#0ea5e9", fontcolor="white"];
-  S2 [label="2 • Data Selection\n(Asheville, NC)", fillcolor="#10b981", fontcolor="white"];
-  S3 [label="3 • Preprocessing\nDrop missing price → Clean numerics → Mode-impute superhost", fillcolor="#f59e0b", fontcolor="white"];
-  S4 [label="4 • EDA\nDescribe • Distributions • Pairplot • Correlation • Outliers • Map", fillcolor="#8b5cf6", fontcolor="white"];
-  S5 [label="5 • Modeling\nNormalize + Split + Train (Keras)", fillcolor="#ef4444", fontcolor="white"];
-  S6 [label="Final Results\nMAE • RMSE • R²", fillcolor="#334155", fontcolor="white"];
-
-  S0 -> S1 -> S2 -> S3 -> S4 -> S5 -> S6;
-}"""
-st.graphviz_chart(flow)
-
-
 
 # ====================================================
 # Section 1 — Data Loading
