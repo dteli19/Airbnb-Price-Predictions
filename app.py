@@ -1,4 +1,4 @@
-# app.py — Airbnb Price Prediction (static Colab-style + guidance & observations)
+# app.py — Airbnb Price Prediction (Structured & Beautified Workflow)
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -14,50 +14,38 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 # ----------------------------
-# Page config
+# Page Config
 # ----------------------------
 st.set_page_config(page_title="Airbnb Price Prediction", page_icon="🏠", layout="wide")
-st.title("🏠 Airbnb Price Prediction — End-to-End (Colab-style)")
+st.title("🏠 Airbnb Price Prediction — End-to-End Data Modeling Workflow")
 
 # ----------------------------
-# Helpers
+# Helper Functions
 # ----------------------------
-DATA_PATH = Path("listings.csv")  # hardcoded
+DATA_PATH = Path("listings.csv")  # Hardcoded dataset path
 TARGET = "price"
 
 def clean_price_series(s: pd.Series) -> pd.Series:
+    """Clean the price column (remove symbols, commas, etc.)"""
     if s.dtype == object:
         s = s.astype(str).str.replace(r"[\$,]", "", regex=True).str.strip()
     return pd.to_numeric(s, errors="coerce")
 
 def split_num_cat(df: pd.DataFrame, exclude=None):
+    """Split columns into numeric and categorical types"""
     exclude = set(exclude or [])
     num_cols = [c for c in df.select_dtypes(include=[np.number]).columns if c not in exclude]
     cat_cols = [c for c in df.select_dtypes(exclude=[np.number]).columns if c not in exclude]
     return num_cols, cat_cols
 
 def eval_regression(y_true, y_pred):
+    """Compute MAE, RMSE, and R²"""
     y_true = np.asarray(y_true).ravel()
     y_pred = np.asarray(y_pred).ravel()
     mae = mean_absolute_error(y_true, y_pred)
-    mse = mean_squared_error(y_true, y_pred)  # version-safe
-    rmse = float(np.sqrt(mse))
+    rmse = float(np.sqrt(mean_squared_error(y_true, y_pred)))
     r2 = r2_score(y_true, y_pred)
     return mae, rmse, r2
-
-def price_quick_stats(s: pd.Series):
-    s = pd.to_numeric(s, errors="coerce").dropna()
-    if s.empty:
-        return {}
-    return {
-        "count": int(s.count()),
-        "mean": float(s.mean()),
-        "median": float(s.median()),
-        "std": float(s.std(ddof=1)) if s.count() > 1 else 0.0,
-        "min": float(s.min()),
-        "max": float(s.max()),
-        "skew": float(s.skew()) if s.count() > 2 else 0.0,
-    }
 
 # ====================================================
 # Section 1 — Overview, Problem Statement, About the Data
@@ -65,69 +53,60 @@ def price_quick_stats(s: pd.Series):
 st.header("Section 1 — Overview, Problem Statement, About the Data")
 
 st.markdown("""
-**Overview**  
-This project predicts **Airbnb nightly prices** using an Inside Airbnb dataset. It mirrors a Colab workflow: load data, clean/prepare, explore, and build a baseline regression model.
+### **Overview**
+This project develops a **regression model** to predict **Airbnb listing prices** using the publicly available *Inside Airbnb* dataset.  
+It simulates an end-to-end data analytics workflow: **Data Loading → Preprocessing → EDA → Modeling → Evaluation.**
 
-**Problem Statement**  
-Given listing attributes (capacity, reviews, location, room/prop types), estimate the **price**, and surface which features influence price most in a simple, interpretable baseline.
+### **Problem Statement**
+The objective is to predict the nightly **listing price** based on attributes like room type, capacity, location, and reviews —  
+and determine which features most strongly influence price.
 
-**About the Data**  
-Inside Airbnb `listings.csv` typically includes: `price`, `accommodates`, `bedrooms`, `bathrooms`, `number_of_reviews`, `review_scores_rating`, `minimum_nights`, `availability_365`, `latitude`, `longitude`, `room_type`, `neighbourhood`, `neighbourhood_cleansed`, `property_type`, etc.  
-(Columns vary by city; this pipeline adapts to what’s available.)
-""")
+### **About the Data**
+The dataset (`listings.csv`) includes:
+- **Price-related attributes:** `price`, `minimum_nights`, `availability_365`
+- **Property characteristics:** `accommodates`, `bedrooms`, `bathrooms`, `room_type`, `property_type`
+- **Location details:** `latitude`, `longitude`, `neighbourhood`
+- **Engagement indicators:** `number_of_reviews`, `review_scores_rating`
 
-with st.expander("What to look for (Section 1)"):
-    st.markdown("""
-- Confirm that the dataset contains `price` and a reasonable set of predictors.  
-- Check if the city export has `room_type`, `accommodates`, and review fields—these usually carry strong signal.  
+Each row represents one Airbnb listing for a given city.
 """)
 
 # ====================================================
-# Section 2 — Actions / Steps to be Performed
+# Section 2 — Actions / Workflow Steps
 # ====================================================
-st.header("Section 2 — Actions / Steps to be Performed")
+st.header("Section 2 — Actions / Workflow Steps")
+
 st.markdown("""
-1) **Data Loading**: Read `data/listings.csv`.  
-2) **Data Selection**: Use a fixed feature set (intersect with available columns); target = `price`.  
-3) **Data Preprocessing**: Clean `price`; impute numeric with **mean**; categorical with **'Unknown'**; drop residual NA.  
-4) **EDA**: Inspect target distribution and numeric correlation heatmap.  
-5) **Prepare for Modeling**: Normalize numerics, one-hot encode categoricals; split 80/20 (seed=42); **Linear Regression** baseline; report **MAE, RMSE, R²**; show standardized coefficients & Predicted vs Actual.
-""")
+This project follows a structured **5-step modeling pipeline**:
 
-with st.expander("What we did (Section 2)"):
-    st.markdown("""
-- Kept preprocessing **fixed** (no user choices) to match Colab.  
-- Ensured reproducibility with a fixed **random_state=42** for the split.  
+1️⃣ **Data Loading** – Import and inspect the dataset (`listings.csv`).  
+2️⃣ **Data Selection** – Identify relevant predictive variables and the target (`price`).  
+3️⃣ **Data Preprocessing** – Handle missing values, convert data types, and prepare for modeling.  
+4️⃣ **Exploratory Data Analysis (EDA)** – Explore target distributions and relationships between variables.  
+5️⃣ **Prepare for Modeling & Evaluation** – Normalize data, build a **Linear Regression model**, and evaluate using **MAE**, **RMSE**, and **R²**.
+
+The process ensures clean, interpretable results while maintaining reproducibility across cities and exports.
 """)
 
 # ====================================================
-# Section 3 — Notebook Workflow (1→5)
+# Section 3 — Workflow Implementation
 # ====================================================
-st.header("Section 3 — Notebook Workflow")
+st.header("Section 3 — Data Modeling Workflow")
 
-# 3.1 Data Loading
-st.subheader("3.1 Data Loading")
+# Step 1: Data Loading
+st.subheader("Step 1: Data Loading")
 if not DATA_PATH.exists():
-    st.error("File not found: `data/listings.csv`. Please add the Inside Airbnb CSV there and rerun.")
+    st.error("❌ File not found: `data/listings.csv`. Please add the dataset and rerun.")
     st.stop()
 
-try:
-    df = pd.read_csv(DATA_PATH, low_memory=False)
-except Exception:
-    df = pd.read_csv(DATA_PATH, engine="python", low_memory=False)
-
-st.success(f"Loaded {df.shape[0]:,} rows × {df.shape[1]:,} columns from `{DATA_PATH}`")
+df = pd.read_csv(DATA_PATH, low_memory=False)
+st.success(f"✅ Loaded {df.shape[0]:,} rows × {df.shape[1]:,} columns")
 st.dataframe(df.head(), use_container_width=True)
 
-with st.expander("What to look for (Data Loading)"):
-    st.markdown("""
-- Data shape and a quick glance of the first rows: do key columns exist and look clean (no all-null columns)?  
-""")
-
-# 3.2 Data Selection (fixed)
-st.subheader("3.2 Data Selection")
+# Step 2: Data Selection
+st.subheader("Step 2: Data Selection")
 if TARGET not in df.columns:
-    st.error("Column `price` not found in listings.csv.")
+    st.error("Column `price` not found in the dataset.")
     st.stop()
 
 df[TARGET] = clean_price_series(df[TARGET])
@@ -137,181 +116,353 @@ candidate_defaults = [
     "number_of_reviews", "review_scores_rating",
     "minimum_nights", "availability_365",
     "latitude", "longitude",
-    "room_type", "neighbourhood_cleansed", "neighbourhood", "property_type"
+    "room_type", "neighbourhood", "neighbourhood_cleansed", "property_type"
 ]
 features = [c for c in candidate_defaults if c in df.columns]
 if not features:
-    # Fallback: safe cap if city export is unusual
     features = [c for c in df.columns if c != TARGET][:20]
 
-st.caption("Using a fixed feature set (Colab-style).")
-st.write("**Features used:**", features)
-
+st.markdown(f"**Features selected for modeling:** {', '.join(features)}")
 work = df[features + [TARGET]].copy()
 
-with st.expander("What we did (Data Selection)"):
-    st.markdown("""
-- Chose a **standard set** of Airbnb predictors often present across cities.  
-- Kept target fixed as **`price`** and took the **intersection** with actual columns.  
-""")
-
-# 3.3 Data Preprocessing (fixed)
-st.subheader("3.3 Data Preprocessing (fixed rules)")
+# Step 3: Data Preprocessing
+st.subheader("Step 3: Data Preprocessing")
 
 num_cols, cat_cols = split_num_cat(work.drop(columns=[TARGET]))
-# Numeric → mean; Categorical → 'Unknown'
+
+# Handle missing data
 for c in num_cols:
     work[c] = pd.to_numeric(work[c], errors="coerce").fillna(work[c].mean())
 for c in cat_cols:
     work[c] = work[c].astype(object).fillna("Unknown")
 
-before = len(work)
-work = work.dropna(subset=features + [TARGET])
-after = len(work)
-st.caption(f"Dropped {before - after} rows after preprocessing (kept {after}).")
+before, after = len(work), len(work.dropna())
+work = work.dropna()
+st.info(f"Cleaned dataset: {after:,} valid rows (removed {before - after:,} incomplete entries).")
 
-# Missingness (original selection)
-miss_tbl = df[features + [TARGET]].isna().mean().sort_values(ascending=False).to_frame("missing_ratio")
-st.write("**Missingness (original selection, %)**")
-st.dataframe((miss_tbl * 100).round(2), use_container_width=True)
+# Step 4: Exploratory Data Analysis
+st.subheader("Step 4: Exploratory Data Analysis (EDA)")
 
-with st.expander("What to look for (Preprocessing)"):
-    st.markdown("""
-- Are there columns with **very high missingness** (e.g., >40%) that might be noisy?  
-- After imputation, did we **retain enough rows** for a reliable split?  
-""")
-
-# 3.4 EDA
-st.subheader("3.4 Exploratory Data Analysis (EDA)")
+# Price distribution
 c1, c2 = st.columns(2)
-
 with c1:
-    st.write("**Target Distribution (price)**")
+    st.markdown("**Distribution of Price**")
     fig, ax = plt.subplots()
-    sns.histplot(work[TARGET], bins=50, ax=ax)
-    ax.set_xlabel("price")
+    sns.histplot(work[TARGET], bins=40, ax=ax, color="#66b3ff")
+    ax.set_xlabel("Price")
+    ax.set_ylabel("Count")
     st.pyplot(fig)
 
+# Correlation heatmap
 with c2:
-    st.write("**Correlation (numeric only)**")
-    corr_num = [c for c in num_cols if c in work.columns] + [TARGET]
-    corr_num = [c for c in corr_num if pd.api.types.is_numeric_dtype(work[c])]
-    if len(corr_num) >= 2:
-        fig, ax = plt.subplots(figsize=(7, 5))
-        sns.heatmap(work[corr_num].corr(numeric_only=True), cmap="Blues", ax=ax)
-        st.pyplot(fig)
-    else:
-        st.info("Not enough numeric columns for a correlation heatmap.")
+    st.markdown("**Correlation (Numeric Features)**")
+    corr_cols = [c for c in num_cols if c in work.columns] + [TARGET]
+    fig, ax = plt.subplots(figsize=(7, 5))
+    sns.heatmap(work[corr_cols].corr(numeric_only=True), cmap="YlGnBu", annot=False, ax=ax)
+    st.pyplot(fig)
 
-# Auto-observations (EDA)
-auto_obs = []
-# Price stats
-stats = price_quick_stats(work[TARGET])
-if stats:
-    auto_obs.append(f"- **Price stats:** mean ≈ {stats['mean']:.2f}, median ≈ {stats['median']:.2f}, std ≈ {stats['std']:.2f}; range [{stats['min']:.2f}, {stats['max']:.2f}].")
-    if abs(stats["skew"]) > 1:
-        auto_obs.append("- **Skewness:** price appears **highly skewed**; consider log-transform in later iterations.")
-    elif abs(stats["skew"]) > 0.5:
-        auto_obs.append("- **Skewness:** price shows **moderate skew**.")
-# Top numeric correlations with price
-if len(corr_num) >= 2:
-    corrs = work[corr_num].corr(numeric_only=True)[TARGET].drop(TARGET).dropna()
-    if not corrs.empty:
-        top_corr = corrs.abs().sort_values(ascending=False).head(3).index.tolist()
-        auto_obs.append(f"- **Top numeric correlates with price:** {', '.join(top_corr)}.")
-
-with st.expander("Observations (from this EDA)"):
-    if auto_obs:
-        st.markdown("\n".join(auto_obs))
-    else:
-        st.markdown("- No strong numeric correlations detected or insufficient numeric features.")
-
-# 3.5 Prepare for Modeling (Normalize & Split) + Linear Regression
-st.subheader("3.5 Prepare for Modeling (Normalize & Split Data) + Train")
+# Step 5: Prepare for Modeling (Normalize & Split)
+st.subheader("Step 5: Prepare for Modeling (Normalize & Split Data)")
 
 X = work[features].copy()
 y = work[TARGET].astype(float)
+num_feats, cat_feats = split_num_cat(X)
 
-numeric_features, categorical_features = split_num_cat(X)
+preprocess = ColumnTransformer([
+    ("num", StandardScaler(), num_feats),
+    ("cat", OneHotEncoder(handle_unknown="ignore"), cat_feats)
+])
 
-preprocess = ColumnTransformer(
-    transformers=[
-        ("num", StandardScaler(), numeric_features),
-        ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features),
-    ],
-    remainder="drop"
-)
+pipe = Pipeline([
+    ("prep", preprocess),
+    ("model", LinearRegression())
+])
 
-pipe = Pipeline(steps=[("prep", preprocess), ("model", LinearRegression())])
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.20, random_state=42
-)
-
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=42)
 pipe.fit(X_train, y_train)
-pred_train = pipe.predict(X_train)
-pred_test  = pipe.predict(X_test)
+y_pred = pipe.predict(X_test)
 
-mae_tr, rmse_tr, r2_tr = eval_regression(y_train, pred_train)
-mae_te, rmse_te, r2_te = eval_regression(y_test, pred_test)
-
-with st.expander("What we did (Model Prep & Train)"):
-    st.markdown("""
-- Standardized **numeric** features; one-hot encoded **categoricals**.  
-- Fixed **80/20 split** (seed=42).  
-- Trained **Linear Regression** for a simple, interpretable baseline.  
-""")
+mae = mean_absolute_error(y_test, y_pred)
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+r2 = r2_score(y_test, y_pred)
 
 # ====================================================
 # Section 4 — Results
 # ====================================================
-st.header("Section 4 — Results")
+st.header("Section 4 — Results and Insights")
 
 m1, m2, m3 = st.columns(3)
-m1.metric("Test MAE", f"{mae_te:,.2f}")
-m2.metric("Test RMSE", f"{rmse_te:,.2f}")
-m3.metric("Test R²", f"{r2_te:,.3f}")
-st.caption(f"Train → MAE: {mae_tr:,.2f} | RMSE: {rmse_tr:,.2f} | R²: {r2_tr:,.3f}")
+m1.metric("Mean Absolute Error (MAE)", f"{mae:,.2f}")
+m2.metric("Root Mean Squared Error (RMSE)", f"{rmse:,.2f}")
+m3.metric("R² Score", f"{r2:.3f}")
 
-st.subheader("Top Standardized Coefficients (Linear Model)")
+# Feature importance
+st.subheader("Top Feature Influences on Price")
 try:
     ohe = pipe.named_steps["prep"].named_transformers_["cat"]
-    cat_names = ohe.get_feature_names_out(categorical_features) if categorical_features else np.array([])
-    feature_names = np.array(numeric_features + list(cat_names))
-
+    cat_names = ohe.get_feature_names_out(cat_feats) if cat_feats else []
+    feature_names = np.array(num_feats + list(cat_names))
     coefs = pipe.named_steps["model"].coef_
-    coef_df = pd.DataFrame({"feature": feature_names, "coef": coefs})
-    coef_df["abs_coef"] = coef_df["coef"].abs()
-    coef_df = coef_df.sort_values("abs_coef", ascending=False).head(20)
+    coef_df = pd.DataFrame({"Feature": feature_names, "Coefficient": coefs})
+    coef_df["Abs"] = coef_df["Coefficient"].abs()
+    coef_df = coef_df.sort_values("Abs", ascending=False).head(15)
 
-    fig, ax = plt.subplots(figsize=(7, max(3.5, 0.35 * len(coef_df))))
-    sns.barplot(x="coef", y="feature", data=coef_df, ax=ax)
-    ax.set_xlabel("Standardized coefficient")
-    ax.set_ylabel("")
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.barplot(x="Coefficient", y="Feature", data=coef_df, ax=ax, palette="viridis")
     st.pyplot(fig)
 except Exception:
-    st.info("Could not render coefficients (e.g., all-categorical inputs).")
+    st.info("Could not display feature influence chart.")
 
-st.subheader("Predicted vs Actual (Test)")
+# Predicted vs Actual
+st.subheader("Predicted vs Actual Prices")
 fig, ax = plt.subplots()
-ax.scatter(y_test, pred_test, alpha=0.4)
-lims = [min(y_test.min(), pred_test.min()), max(y_test.max(), pred_test.max())]
+ax.scatter(y_test, y_pred, alpha=0.5, color="#3b82f6")
+lims = [min(y_test.min(), y_pred.min()), max(y_test.max(), y_pred.max())]
 ax.plot(lims, lims, "r--", linewidth=1)
-ax.set_xlabel("Actual price"); ax.set_ylabel("Predicted price")
+ax.set_xlabel("Actual Price")
+ax.set_ylabel("Predicted Price")
 st.pyplot(fig)
 
-with st.expander("What to look for (Results)"):
-    st.markdown("""
-- **Generalization gap:** Compare Train vs Test metrics—overfitting if Train ≪ Test errors.  
-- **Feature effects:** Which standardized coefficients are largest? Do they align with domain expectations (e.g., `accommodates`, `room_type`)?  
-- **Prediction quality:** Points tightly along the 45° line indicate better fit.  
+st.markdown("""
+### **Interpretation**
+- **MAE & RMSE** quantify average prediction errors.  
+- **R²** indicates how well the model explains price variation (closer to 1 = better).  
+- **Feature Coefficients** show which features have the strongest influence on pricing.  
+- **Predicted vs Actual Plot** helps visually assess model accuracy — points close to the red line indicate stronger fit.
 """)
 
-# Download predictions (for inspection)
-out = pd.DataFrame({"y_test": y_test.reset_index(drop=True), "y_pred": pd.Series(pred_test)})
-st.download_button(
-    "⬇️ Download predictions (CSV)",
-    data=out.to_csv(index=False),
-    file_name="airbnb_price_predictions.csv",
-    mime="text/csv",
-)
+st.success("✅ Airbnb price prediction model successfully executed with interpretable results and clean workflow visualization!")
+# app.py — Airbnb Price Prediction (Structured & Beautified Workflow)
+from pathlib import Path
+import numpy as np
+import pandas as pd
+import streamlit as st
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+# ----------------------------
+# Page Config
+# ----------------------------
+st.set_page_config(page_title="Airbnb Price Prediction", page_icon="🏠", layout="wide")
+st.title("🏠 Airbnb Price Prediction — End-to-End Data Modeling Workflow")
+
+# ----------------------------
+# Helper Functions
+# ----------------------------
+DATA_PATH = Path("data/listings.csv")  # Hardcoded dataset path
+TARGET = "price"
+
+def clean_price_series(s: pd.Series) -> pd.Series:
+    """Clean the price column (remove symbols, commas, etc.)"""
+    if s.dtype == object:
+        s = s.astype(str).str.replace(r"[\$,]", "", regex=True).str.strip()
+    return pd.to_numeric(s, errors="coerce")
+
+def split_num_cat(df: pd.DataFrame, exclude=None):
+    """Split columns into numeric and categorical types"""
+    exclude = set(exclude or [])
+    num_cols = [c for c in df.select_dtypes(include=[np.number]).columns if c not in exclude]
+    cat_cols = [c for c in df.select_dtypes(exclude=[np.number]).columns if c not in exclude]
+    return num_cols, cat_cols
+
+def eval_regression(y_true, y_pred):
+    """Compute MAE, RMSE, and R²"""
+    y_true = np.asarray(y_true).ravel()
+    y_pred = np.asarray(y_pred).ravel()
+    mae = mean_absolute_error(y_true, y_pred)
+    rmse = float(np.sqrt(mean_squared_error(y_true, y_pred)))
+    r2 = r2_score(y_true, y_pred)
+    return mae, rmse, r2
+
+# ====================================================
+# Section 1 — Overview, Problem Statement, About the Data
+# ====================================================
+st.header("Section 1 — Overview, Problem Statement, About the Data")
+
+st.markdown("""
+### **Overview**
+This project develops a **regression model** to predict **Airbnb listing prices** using the publicly available *Inside Airbnb* dataset.  
+It simulates an end-to-end data analytics workflow: **Data Loading → Preprocessing → EDA → Modeling → Evaluation.**
+
+### **Problem Statement**
+The objective is to predict the nightly **listing price** based on attributes like room type, capacity, location, and reviews —  
+and determine which features most strongly influence price.
+
+### **About the Data**
+The dataset (`listings.csv`) includes:
+- **Price-related attributes:** `price`, `minimum_nights`, `availability_365`
+- **Property characteristics:** `accommodates`, `bedrooms`, `bathrooms`, `room_type`, `property_type`
+- **Location details:** `latitude`, `longitude`, `neighbourhood`
+- **Engagement indicators:** `number_of_reviews`, `review_scores_rating`
+
+Each row represents one Airbnb listing for a given city.
+""")
+
+# ====================================================
+# Section 2 — Actions / Workflow Steps
+# ====================================================
+st.header("Section 2 — Actions / Workflow Steps")
+
+st.markdown("""
+This project follows a structured **5-step modeling pipeline**:
+
+1️⃣ **Data Loading** – Import and inspect the dataset (`listings.csv`).  
+2️⃣ **Data Selection** – Identify relevant predictive variables and the target (`price`).  
+3️⃣ **Data Preprocessing** – Handle missing values, convert data types, and prepare for modeling.  
+4️⃣ **Exploratory Data Analysis (EDA)** – Explore target distributions and relationships between variables.  
+5️⃣ **Prepare for Modeling & Evaluation** – Normalize data, build a **Linear Regression model**, and evaluate using **MAE**, **RMSE**, and **R²**.
+
+The process ensures clean, interpretable results while maintaining reproducibility across cities and exports.
+""")
+
+# ====================================================
+# Section 3 — Workflow Implementation
+# ====================================================
+st.header("Section 3 — Data Modeling Workflow")
+
+# Step 1: Data Loading
+st.subheader("Step 1: Data Loading")
+if not DATA_PATH.exists():
+    st.error("❌ File not found: `data/listings.csv`. Please add the dataset and rerun.")
+    st.stop()
+
+df = pd.read_csv(DATA_PATH, low_memory=False)
+st.success(f"✅ Loaded {df.shape[0]:,} rows × {df.shape[1]:,} columns")
+st.dataframe(df.head(), use_container_width=True)
+
+# Step 2: Data Selection
+st.subheader("Step 2: Data Selection")
+if TARGET not in df.columns:
+    st.error("Column `price` not found in the dataset.")
+    st.stop()
+
+df[TARGET] = clean_price_series(df[TARGET])
+
+candidate_defaults = [
+    "accommodates", "bedrooms", "bathrooms", "beds",
+    "number_of_reviews", "review_scores_rating",
+    "minimum_nights", "availability_365",
+    "latitude", "longitude",
+    "room_type", "neighbourhood", "neighbourhood_cleansed", "property_type"
+]
+features = [c for c in candidate_defaults if c in df.columns]
+if not features:
+    features = [c for c in df.columns if c != TARGET][:20]
+
+st.markdown(f"**Features selected for modeling:** {', '.join(features)}")
+work = df[features + [TARGET]].copy()
+
+# Step 3: Data Preprocessing
+st.subheader("Step 3: Data Preprocessing")
+
+num_cols, cat_cols = split_num_cat(work.drop(columns=[TARGET]))
+
+# Handle missing data
+for c in num_cols:
+    work[c] = pd.to_numeric(work[c], errors="coerce").fillna(work[c].mean())
+for c in cat_cols:
+    work[c] = work[c].astype(object).fillna("Unknown")
+
+before, after = len(work), len(work.dropna())
+work = work.dropna()
+st.info(f"Cleaned dataset: {after:,} valid rows (removed {before - after:,} incomplete entries).")
+
+# Step 4: Exploratory Data Analysis
+st.subheader("Step 4: Exploratory Data Analysis (EDA)")
+
+# Price distribution
+c1, c2 = st.columns(2)
+with c1:
+    st.markdown("**Distribution of Price**")
+    fig, ax = plt.subplots()
+    sns.histplot(work[TARGET], bins=40, ax=ax, color="#66b3ff")
+    ax.set_xlabel("Price")
+    ax.set_ylabel("Count")
+    st.pyplot(fig)
+
+# Correlation heatmap
+with c2:
+    st.markdown("**Correlation (Numeric Features)**")
+    corr_cols = [c for c in num_cols if c in work.columns] + [TARGET]
+    fig, ax = plt.subplots(figsize=(7, 5))
+    sns.heatmap(work[corr_cols].corr(numeric_only=True), cmap="YlGnBu", annot=False, ax=ax)
+    st.pyplot(fig)
+
+# Step 5: Prepare for Modeling (Normalize & Split)
+st.subheader("Step 5: Prepare for Modeling (Normalize & Split Data)")
+
+X = work[features].copy()
+y = work[TARGET].astype(float)
+num_feats, cat_feats = split_num_cat(X)
+
+preprocess = ColumnTransformer([
+    ("num", StandardScaler(), num_feats),
+    ("cat", OneHotEncoder(handle_unknown="ignore"), cat_feats)
+])
+
+pipe = Pipeline([
+    ("prep", preprocess),
+    ("model", LinearRegression())
+])
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=42)
+pipe.fit(X_train, y_train)
+y_pred = pipe.predict(X_test)
+
+mae = mean_absolute_error(y_test, y_pred)
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+r2 = r2_score(y_test, y_pred)
+
+# ====================================================
+# Section 4 — Results
+# ====================================================
+st.header("Section 4 — Results and Insights")
+
+m1, m2, m3 = st.columns(3)
+m1.metric("Mean Absolute Error (MAE)", f"{mae:,.2f}")
+m2.metric("Root Mean Squared Error (RMSE)", f"{rmse:,.2f}")
+m3.metric("R² Score", f"{r2:.3f}")
+
+# Feature importance
+st.subheader("Top Feature Influences on Price")
+try:
+    ohe = pipe.named_steps["prep"].named_transformers_["cat"]
+    cat_names = ohe.get_feature_names_out(cat_feats) if cat_feats else []
+    feature_names = np.array(num_feats + list(cat_names))
+    coefs = pipe.named_steps["model"].coef_
+    coef_df = pd.DataFrame({"Feature": feature_names, "Coefficient": coefs})
+    coef_df["Abs"] = coef_df["Coefficient"].abs()
+    coef_df = coef_df.sort_values("Abs", ascending=False).head(15)
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.barplot(x="Coefficient", y="Feature", data=coef_df, ax=ax, palette="viridis")
+    st.pyplot(fig)
+except Exception:
+    st.info("Could not display feature influence chart.")
+
+# Predicted vs Actual
+st.subheader("Predicted vs Actual Prices")
+fig, ax = plt.subplots()
+ax.scatter(y_test, y_pred, alpha=0.5, color="#3b82f6")
+lims = [min(y_test.min(), y_pred.min()), max(y_test.max(), y_pred.max())]
+ax.plot(lims, lims, "r--", linewidth=1)
+ax.set_xlabel("Actual Price")
+ax.set_ylabel("Predicted Price")
+st.pyplot(fig)
+
+st.markdown("""
+### **Interpretation**
+- **MAE & RMSE** quantify average prediction errors.  
+- **R²** indicates how well the model explains price variation (closer to 1 = better).  
+- **Feature Coefficients** show which features have the strongest influence on pricing.  
+- **Predicted vs Actual Plot** helps visually assess model accuracy — points close to the red line indicate stronger fit.
+""")
+
+st.success("✅ Airbnb price prediction model successfully executed with interpretable results and clean workflow visualization!")
