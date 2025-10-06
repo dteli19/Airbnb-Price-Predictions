@@ -1,4 +1,4 @@
-# app.py — Airbnb Price Prediction (static Colab-style, structured like your other projects)
+# app.py — Airbnb Price Prediction (static Colab-style + guidance & observations)
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -14,7 +14,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 # ----------------------------
-# Page Config
+# Page config
 # ----------------------------
 st.set_page_config(page_title="Airbnb Price Prediction", page_icon="🏠", layout="wide")
 st.title("🏠 Airbnb Price Prediction — End-to-End (Colab-style)")
@@ -22,7 +22,7 @@ st.title("🏠 Airbnb Price Prediction — End-to-End (Colab-style)")
 # ----------------------------
 # Helpers
 # ----------------------------
-DATA_PATH = Path("listings.csv")  # hardcoded
+DATA_PATH = Path("data/listings.csv")  # hardcoded
 TARGET = "price"
 
 def clean_price_series(s: pd.Series) -> pd.Series:
@@ -45,6 +45,20 @@ def eval_regression(y_true, y_pred):
     r2 = r2_score(y_true, y_pred)
     return mae, rmse, r2
 
+def price_quick_stats(s: pd.Series):
+    s = pd.to_numeric(s, errors="coerce").dropna()
+    if s.empty:
+        return {}
+    return {
+        "count": int(s.count()),
+        "mean": float(s.mean()),
+        "median": float(s.median()),
+        "std": float(s.std(ddof=1)) if s.count() > 1 else 0.0,
+        "min": float(s.min()),
+        "max": float(s.max()),
+        "skew": float(s.skew()) if s.count() > 2 else 0.0,
+    }
+
 # ====================================================
 # Section 1 — Overview, Problem Statement, About the Data
 # ====================================================
@@ -52,31 +66,42 @@ st.header("Section 1 — Overview, Problem Statement, About the Data")
 
 st.markdown("""
 **Overview**  
-This project predicts **Airbnb nightly prices** using the Inside Airbnb dataset. The app mirrors a Colab workflow: load data, clean/prepare, explore, and build a baseline regression model.
+This project predicts **Airbnb nightly prices** using an Inside Airbnb dataset. It mirrors a Colab workflow: load data, clean/prepare, explore, and build a baseline regression model.
 
 **Problem Statement**  
-Given listing attributes (capacity, reviews, location, room/prop types), estimate the **price** and surface which features influence price most in a simple, interpretable baseline.
+Given listing attributes (capacity, reviews, location, room/prop types), estimate the **price**, and surface which features influence price most in a simple, interpretable baseline.
 
 **About the Data**  
 Inside Airbnb `listings.csv` typically includes: `price`, `accommodates`, `bedrooms`, `bathrooms`, `number_of_reviews`, `review_scores_rating`, `minimum_nights`, `availability_365`, `latitude`, `longitude`, `room_type`, `neighbourhood`, `neighbourhood_cleansed`, `property_type`, etc.  
-(Note: exact columns vary by city; the pipeline adapts to what’s available.)
+(Columns vary by city; this pipeline adapts to what’s available.)
+""")
+
+with st.expander("What to look for (Section 1)"):
+    st.markdown("""
+- Confirm that the dataset contains `price` and a reasonable set of predictors.  
+- Check if the city export has `room_type`, `accommodates`, and review fields—these usually carry strong signal.  
 """)
 
 # ====================================================
 # Section 2 — Actions / Steps to be Performed
 # ====================================================
 st.header("Section 2 — Actions / Steps to be Performed")
-
 st.markdown("""
 1) **Data Loading**: Read `data/listings.csv`.  
-2) **Data Selection**: Use a fixed feature set (intersected with available columns); target = `price`.  
-3) **Data Preprocessing**: Clean `price`; impute numeric with **mean**; categorical with **'Unknown'**; drop remaining NA.  
-4) **EDA**: View target distribution and numeric correlation heatmap.  
-5) **Prepare for Modeling**: Normalize numerics, one-hot encode categoricals; train/test split 80/20 (seed=42); **Linear Regression**; report **MAE, RMSE, R²**; show standardized coefficients and Predicted vs Actual plot.
+2) **Data Selection**: Use a fixed feature set (intersect with available columns); target = `price`.  
+3) **Data Preprocessing**: Clean `price`; impute numeric with **mean**; categorical with **'Unknown'**; drop residual NA.  
+4) **EDA**: Inspect target distribution and numeric correlation heatmap.  
+5) **Prepare for Modeling**: Normalize numerics, one-hot encode categoricals; split 80/20 (seed=42); **Linear Regression** baseline; report **MAE, RMSE, R²**; show standardized coefficients & Predicted vs Actual.
+""")
+
+with st.expander("What we did (Section 2)"):
+    st.markdown("""
+- Kept preprocessing **fixed** (no user choices) to match Colab.  
+- Ensured reproducibility with a fixed **random_state=42** for the split.  
 """)
 
 # ====================================================
-# Section 3 — Colab Workflow (1→5)
+# Section 3 — Notebook Workflow (1→5)
 # ====================================================
 st.header("Section 3 — Notebook Workflow")
 
@@ -93,6 +118,11 @@ except Exception:
 
 st.success(f"Loaded {df.shape[0]:,} rows × {df.shape[1]:,} columns from `{DATA_PATH}`")
 st.dataframe(df.head(), use_container_width=True)
+
+with st.expander("What to look for (Data Loading)"):
+    st.markdown("""
+- Data shape and a quick glance of the first rows: do key columns exist and look clean (no all-null columns)?  
+""")
 
 # 3.2 Data Selection (fixed)
 st.subheader("3.2 Data Selection")
@@ -111,7 +141,7 @@ candidate_defaults = [
 ]
 features = [c for c in candidate_defaults if c in df.columns]
 if not features:
-    # Fallback: safe cap
+    # Fallback: safe cap if city export is unusual
     features = [c for c in df.columns if c != TARGET][:20]
 
 st.caption("Using a fixed feature set (Colab-style).")
@@ -119,11 +149,17 @@ st.write("**Features used:**", features)
 
 work = df[features + [TARGET]].copy()
 
+with st.expander("What we did (Data Selection)"):
+    st.markdown("""
+- Chose a **standard set** of Airbnb predictors often present across cities.  
+- Kept target fixed as **`price`** and took the **intersection** with actual columns.  
+""")
+
 # 3.3 Data Preprocessing (fixed)
 st.subheader("3.3 Data Preprocessing (fixed rules)")
 
-# Impute: numeric→mean; categorical→'Unknown'; then drop residual NA in selected cols
 num_cols, cat_cols = split_num_cat(work.drop(columns=[TARGET]))
+# Numeric → mean; Categorical → 'Unknown'
 for c in num_cols:
     work[c] = pd.to_numeric(work[c], errors="coerce").fillna(work[c].mean())
 for c in cat_cols:
@@ -134,10 +170,16 @@ work = work.dropna(subset=features + [TARGET])
 after = len(work)
 st.caption(f"Dropped {before - after} rows after preprocessing (kept {after}).")
 
-# (Optional) Missingness report on the original selection
+# Missingness (original selection)
 miss_tbl = df[features + [TARGET]].isna().mean().sort_values(ascending=False).to_frame("missing_ratio")
-st.write("**Missingness (original selection)**")
+st.write("**Missingness (original selection, %)**")
 st.dataframe((miss_tbl * 100).round(2), use_container_width=True)
+
+with st.expander("What to look for (Preprocessing)"):
+    st.markdown("""
+- Are there columns with **very high missingness** (e.g., >40%) that might be noisy?  
+- After imputation, did we **retain enough rows** for a reliable split?  
+""")
 
 # 3.4 EDA
 st.subheader("3.4 Exploratory Data Analysis (EDA)")
@@ -160,6 +202,29 @@ with c2:
         st.pyplot(fig)
     else:
         st.info("Not enough numeric columns for a correlation heatmap.")
+
+# Auto-observations (EDA)
+auto_obs = []
+# Price stats
+stats = price_quick_stats(work[TARGET])
+if stats:
+    auto_obs.append(f"- **Price stats:** mean ≈ {stats['mean']:.2f}, median ≈ {stats['median']:.2f}, std ≈ {stats['std']:.2f}; range [{stats['min']:.2f}, {stats['max']:.2f}].")
+    if abs(stats["skew"]) > 1:
+        auto_obs.append("- **Skewness:** price appears **highly skewed**; consider log-transform in later iterations.")
+    elif abs(stats["skew"]) > 0.5:
+        auto_obs.append("- **Skewness:** price shows **moderate skew**.")
+# Top numeric correlations with price
+if len(corr_num) >= 2:
+    corrs = work[corr_num].corr(numeric_only=True)[TARGET].drop(TARGET).dropna()
+    if not corrs.empty:
+        top_corr = corrs.abs().sort_values(ascending=False).head(3).index.tolist()
+        auto_obs.append(f"- **Top numeric correlates with price:** {', '.join(top_corr)}.")
+
+with st.expander("Observations (from this EDA)"):
+    if auto_obs:
+        st.markdown("\n".join(auto_obs))
+    else:
+        st.markdown("- No strong numeric correlations detected or insufficient numeric features.")
 
 # 3.5 Prepare for Modeling (Normalize & Split) + Linear Regression
 st.subheader("3.5 Prepare for Modeling (Normalize & Split Data) + Train")
@@ -189,6 +254,13 @@ pred_test  = pipe.predict(X_test)
 
 mae_tr, rmse_tr, r2_tr = eval_regression(y_train, pred_train)
 mae_te, rmse_te, r2_te = eval_regression(y_test, pred_test)
+
+with st.expander("What we did (Model Prep & Train)"):
+    st.markdown("""
+- Standardized **numeric** features; one-hot encoded **categoricals**.  
+- Fixed **80/20 split** (seed=42).  
+- Trained **Linear Regression** for a simple, interpretable baseline.  
+""")
 
 # ====================================================
 # Section 4 — Results
@@ -228,7 +300,14 @@ ax.plot(lims, lims, "r--", linewidth=1)
 ax.set_xlabel("Actual price"); ax.set_ylabel("Predicted price")
 st.pyplot(fig)
 
-# Download predictions for inspection
+with st.expander("What to look for (Results)"):
+    st.markdown("""
+- **Generalization gap:** Compare Train vs Test metrics—overfitting if Train ≪ Test errors.  
+- **Feature effects:** Which standardized coefficients are largest? Do they align with domain expectations (e.g., `accommodates`, `room_type`)?  
+- **Prediction quality:** Points tightly along the 45° line indicate better fit.  
+""")
+
+# Download predictions (for inspection)
 out = pd.DataFrame({"y_test": y_test.reset_index(drop=True), "y_pred": pd.Series(pred_test)})
 st.download_button(
     "⬇️ Download predictions (CSV)",
