@@ -90,6 +90,33 @@ def percentile_cap(s: pd.Series, q=0.99) -> float:
     s = pd.to_numeric(s, errors="coerce")
     return float(np.nanpercentile(s.dropna(), q * 100)) if s.notna().any() else np.nan
 
+# ----------------------------------------------------
+# Section 0 — Overview, Problem, About the Data, Actions
+# ----------------------------------------------------
+step_header(0, "Project Overview", "Context • Objective • Data • Workflow", color="#14b8a6")
+
+st.markdown("""
+### **Overview**
+We build an end-to-end pipeline to **predict Airbnb listing prices** for **Asheville, NC** — from loading and cleaning the Inside Airbnb export to EDA, outlier handling, and a baseline neural network.
+
+### **Problem Statement**
+Estimate nightly **price** using listing attributes (capacity, room/property type, reviews, location) and surface patterns that explain price variation.
+
+### **About the Data**
+Source: *Inside Airbnb `listings.csv`* (city export). Typical fields include:
+- **Numerical**: `price`, `bedrooms`, `bathrooms`, `number_of_reviews`, `latitude`, `longitude`
+- **Categorical**: `room_type`, `host_identity_verified`, `host_is_superhost`
+- (Columns vary by city; the pipeline adapts to what’s available.)
+
+### **Actions & 5-Step Workflow**
+1. **Data Loading** — Read `listings.csv`, preview rows, verify schema  
+2. **Data Selection (Asheville, NC)** — Filter to city, keep a compact set of num/cat features  
+3. **Data Preprocessing** — Drop missing `price`, clean numerics, **mode-impute** `host_is_superhost`, fix types  
+4. **EDA** — Describe stats, distributions, pair plot, correlation, **outlier handling (99th pct)**, **geo map**  
+5. **Modeling** — Train/test split (80/20), Keras model with **Normalization**, training curves, predictions → **Final Results**
+""")
+
+
 # ====================================================
 # Section 1 — Data Loading
 # ====================================================
@@ -176,14 +203,39 @@ def two_col_table(n_list, c_list):
     return pd.DataFrame({"Numeric": n_list, "Categorical": c_list})
 
 cols_tbl = two_col_table(present_numeric, present_cats)
-st.dataframe(
-    cols_tbl.style.set_properties(**{"text-align": "left"})
-                  .set_table_styles([{"selector":"th","props":[("text-align","left"),("background","#0b1220"),("color","white"),("padding","6px 8px")]}]),
-    use_container_width=True
-)
 
-st.caption("We keep a compact set of numeric & categorical fields to balance model signal and portability across city exports.")
-st.markdown('<hr class="soft"/>', unsafe_allow_html=True)
+# Render a styled HTML table (st.dataframe ignores Pandas Styler CSS)
+def render_table_html(df, header_bg="#0b1220", header_fg="#ffffff",
+                      even="#0f172a", odd="#111827", font="#e5e7eb"):
+    # Build zebra rows
+    rows_html = []
+    for i, (_, row) in enumerate(df.iterrows()):
+        bg = even if i % 2 == 0 else odd
+        row_html = "".join([f'<td style="padding:8px 10px;color:{font}">{str(val) if val!="" else "&nbsp;"}</td>'
+                            for val in row.values])
+        rows_html.append(f'<tr style="background:{bg}">{row_html}</tr>')
+    rows_html = "\n".join(rows_html)
+
+    html = f"""
+    <div style="border-radius:12px;overflow:hidden;border:1px solid rgba(0,0,0,.08);box-shadow:0 6px 20px rgba(0,0,0,.06)">
+      <table style="border-collapse:collapse;width:100%">
+        <thead>
+          <tr style="background:{header_bg};color:{header_fg}">
+            <th style="text-align:left;padding:10px 12px">Numeric</th>
+            <th style="text-align:left;padding:10px 12px">Categorical</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows_html}
+        </tbody>
+      </table>
+    </div>
+    """
+    return html
+
+st.markdown(render_table_html(cols_tbl), unsafe_allow_html=True)
+
+st.caption("A compact, portable feature set — enough signal for modeling while staying robust across different city exports.")
 
 # ====================================================
 # Section 3 — Data Preprocessing
