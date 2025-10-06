@@ -130,8 +130,7 @@ digraph G {
   S6 [label="Final Results\nMAE • RMSE • R²", fillcolor="#334155", fontcolor="white"];
 
   S0 -> S1 -> S2 -> S3 -> S4 -> S5 -> S6;
-}
-"""
+}"""
 st.graphviz_chart(flow)
 
 
