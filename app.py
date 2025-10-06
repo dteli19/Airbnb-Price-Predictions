@@ -210,6 +210,7 @@ with mc3:
     metric_card("Categorical cols", f"{len(present_cats)}", ", ".join(present_cats) if present_cats else "—", bg="#8b5cf6")
 
 # --- Columns kept for analysis ---
+
 st.subheader("Columns Kept for Analysis")
 
 def two_col_table(n_list, c_list):
@@ -220,34 +221,42 @@ def two_col_table(n_list, c_list):
 
 cols_tbl = two_col_table(present_numeric, present_cats)
 
-# Light pastel styling (soft blue + green)
-styled_cols_tbl = (
-    cols_tbl.style
-    .hide(axis="index")
-    .set_properties(**{
-        "text-align": "left",
-        "font-size": "15px",
-        "background-color": "#f9fafb",  # light gray base
-    })
-    .set_table_styles([
-        {"selector": "th", "props": [
-            ("text-align", "left"),
-            ("background", "#c7ebf0"),  # soft turquoise-blue header
-            ("color", "#0b1220"),
-            ("font-weight", "bold"),
-            ("padding", "8px 10px"),
-            ("border-bottom", "2px solid #a3d5df")
-        ]},
-        {"selector": "td", "props": [
-            ("padding", "8px 10px"),
-            ("border-bottom", "1px solid #e5e7eb")
-        ]}
-    ])
-)
+def render_table_html_light(df):
+    header_bg = "#e8f4fb"   # light blue header
+    header_fg = "#0f172a"   # slate text
+    even_bg   = "#ffffff"   # white rows
+    odd_bg    = "#f7fbff"   # very light blue rows
+    cell_fg   = "#0f172a"
 
-st.dataframe(styled_cols_tbl, use_container_width=True)
-st.caption("Numeric and categorical fields retained for modeling and exploratory analysis.")
+    rows = []
+    for i, (_, row) in enumerate(df.iterrows()):
+        bg = even_bg if i % 2 == 0 else odd_bg
+        tds = "".join(
+            f'<td style="padding:8px 10px;color:{cell_fg}">{("" if pd.isna(v) else v) or "&nbsp;"}</td>'
+            for v in row.values
+        )
+        rows.append(f'<tr style="background:{bg}">{tds}</tr>')
+    rows_html = "\n".join(rows)
 
+    html = f"""
+    <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.05)">
+      <table style="border-collapse:collapse;width:100%;font-size:15px">
+        <thead>
+          <tr style="background:{header_bg};color:{header_fg}">
+            <th style="text-align:left;padding:10px 12px">Numeric</th>
+            <th style="text-align:left;padding:10px 12px">Categorical</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows_html}
+        </tbody>
+      </table>
+    </div>
+    """
+    return html
+
+st.markdown(render_table_html_light(cols_tbl), unsafe_allow_html=True)
+st.caption("A compact, readable split of features retained for analysis.")
 
 # ====================================================
 # Section 3 — Data Preprocessing
