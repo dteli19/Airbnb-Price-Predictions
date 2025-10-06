@@ -19,6 +19,39 @@ from tensorflow.keras import layers, models
 st.set_page_config(page_title="Airbnb Price Prediction (Asheville, NC)", page_icon="🏠", layout="wide")
 st.title("🏠 Airbnb Price Prediction — Asheville, NC (Detailed Workflow)")
 
+# --- Step Header Styles (drop-in) ---
+STEP_STYLES = """
+<style>
+.step-wrap { margin: 18px 0 8px 0; }
+.step-chip {
+  display: inline-block; padding: 4px 10px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; letter-spacing:.4px; text-transform: uppercase;
+  color: white; background: var(--chip, #0ea5e9);
+}
+.step-title {
+  margin: 6px 0 2px 0; font-size: 22px; font-weight: 800; color: #0b1220;
+}
+.step-sub {
+  margin: 0; font-size: 14px; opacity: .8;
+}
+</style>
+"""
+st.markdown(STEP_STYLES, unsafe_allow_html=True)
+
+def step_header(step_no: int, title: str, sub: str = "", color: str = "#0ea5e9"):
+    """
+    Renders a nice step heading with a colored pill.
+    color: hex (e.g., "#0ea5e9" blue, "#10b981" green, "#f59e0b" amber, "#8b5cf6" violet)
+    """
+    html = f"""
+    <div class="step-wrap" style="--chip:{color}">
+      <div class="step-chip">Step {step_no}</div>
+      <div class="step-title">{title}</div>
+      {f'<div class="step-sub">{sub}</div>' if sub else ''}
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
+
 # ----------------------------
 # Helpers
 # ----------------------------
@@ -133,7 +166,80 @@ st.dataframe(df.head(), use_container_width=True)
 
 st.caption("We keep a compact set of numeric & categorical fields to balance model signal and generality across city exports.")
 
-st.caption("We keep a compact set of numeric & categorical fields to balance model signal and generality across city exports.")
+# ====================================================
+# Section 3 — Data Preprocessing
+# ====================================================
+st.header("Section 3 — Data Preprocessing")
+
+st.markdown("""
+**What happens here (fixed policy):**
+- **Target safety:** Drop rows with missing **price** (we do *not* impute targets).
+- **Impute categoricals:** Use **mode** for `host_is_superhost` (robust + simple).
+- **Type fixes:** Convert `t`/`f` → booleans; ensure `room_type` is categorical.
+- **Sanity checks:** Show missingness **before** and **after** imputation.
+""")
+
+# 3.1 — Ensure price is numeric, then drop missing targets
+if TARGET not in df.columns:
+    st.error("Column `price` not found in the selected data.")
+    st.stop()
+
+df[TARGET] = clean_price_series(df[TARGET])
+
+before_drop = len(df)
+df = df.dropna(subset=[TARGET]).copy()
+after_drop = len(df)
+
+st.info(f"🧹 Dropped **{before_drop - after_drop}** rows with missing `price`; kept **{after_drop}** rows.")
+
+# 3.2 — Missingness after dropping price (expecting only `host_is_superhost`)
+st.subheader("Missingness after dropping rows with missing price")
+miss_after_price = (df.isna().mean() * 100).round(2).to_frame("missing_%")
+st.dataframe(miss_after_price, use_container_width=True)
+
+st.markdown("""
+_Expectation:_ Only **`host_is_superhost`** should remain with missing values.  
+We’ll fill that with **mode** (most frequent value) to retain sample size without skewing numeric stats.
+""")
+
+# 3.3 — Mode imputation for `host_is_superhost`
+if "host_is_superhost" in df.columns:
+    # keep raw (string) values for mode calculation
+    col = "host_is_superhost"
+    st.caption("Mode imputation for `host_is_superhost`")
+    mode_val = df[col].mode(dropna=True)
+    if not mode_val.empty:
+        fill_value = mode_val.iloc[0]
+        df[col] = df[col].fillna(fill_value)
+        st.write(f"Filled missing `{col}` with mode value: **{fill_value!r}**")
+    else:
+        st.write("No non-null values to compute a mode for `host_is_superhost`; leaving as-is.")
+else:
+    st.info("`host_is_superhost` not present in this dataset — skipping mode imputation for it.")
+
+# 3.4 — Fix data types and simple encodings
+# Convert t/f-like columns → booleans (True/False)
+for c in ["host_identity_verified", "host_is_superhost"]:
+    if c in df.columns:
+        df[c] = to_bool_t_f(df[c])
+
+# Ensure room_type is categorical (helpful for later encoding)
+if "room_type" in df.columns:
+    df["room_type"] = df["room_type"].astype("category")
+
+# 3.5 — Missingness after imputation/types
+st.subheader("Missingness after imputation & type fixes")
+miss_final = (df.isna().mean() * 100).round(2).to_frame("missing_%")
+st.dataframe(miss_final, use_container_width=True)
+
+st.markdown("""
+✅ **Status:**  
+- No target imputation performed.  
+- `host_is_superhost` filled with **mode**.  
+- Booleans normalized from **`t`/`f`** where applicable.  
+- Dataset ready for **EDA** and **Modeling**.
+""")
+
 
 # ====================================================
 # Section 4 — Exploratory Data Analysis (EDA)
