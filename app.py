@@ -131,43 +131,9 @@ st.dataframe(cols_tbl, use_container_width=True)
 st.caption("Preview of the working dataframe")
 st.dataframe(df.head(), use_container_width=True)
 
-# ====================================================
-# Section 3 — Data Preprocessing
-# ====================================================
-st.header("Section 3 — Data Preprocessing")
+st.caption("We keep a compact set of numeric & categorical fields to balance model signal and generality across city exports.")
 
-# 3.1: Drop rows with missing price (no target imputation)
-if TARGET not in df.columns:
-    st.error("Column `price` not found in the selected data.")
-    st.stop()
-
-df[TARGET] = clean_price_series(df[TARGET])
-before_drop = len(df)
-df = df.dropna(subset=[TARGET])
-after_drop = len(df)
-st.info(f"Dropped **{before_drop - after_drop}** rows with missing `price`; retained **{after_drop}** rows.")
-
-# 3.2: Imputation strategy — show mode imputation for host_is_superhost
-if "host_is_superhost" in df.columns:
-    df["host_is_superhost"] = df["host_is_superhost"].astype(str).replace({"nan": np.nan})
-    mode_val = df["host_is_superhost"].mode(dropna=True)
-    if not mode_val.empty:
-        df["host_is_superhost"] = df["host_is_superhost"].fillna(mode_val.iloc[0])
-
-# 3.3: Fixing data types and encoding
-# - price already numeric
-# - 't'/'f' → booleans for host_identity_verified and host_is_superhost
-for c in ["host_identity_verified", "host_is_superhost"]:
-    if c in df.columns:
-        df[c] = to_bool_t_f(df[c])
-
-# Room type is categorical → keep as category; will one-hot later
-if "room_type" in df.columns:
-    df["room_type"] = df["room_type"].astype("category")
-
-# 3.4: Quick missingness after cleaning
-st.subheader("Missingness after cleaning (selected columns)")
-st.dataframe((df.isna().mean() * 100).round(2).to_frame("missing_%"), use_container_width=True)
+st.caption("We keep a compact set of numeric & categorical fields to balance model signal and generality across city exports.")
 
 # ====================================================
 # Section 4 — Exploratory Data Analysis (EDA)
