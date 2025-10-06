@@ -116,16 +116,13 @@ Source: *Inside Airbnb `listings.csv`* (city export). Typical fields include:
 """)
 
 st.subheader("Workflow — End-to-End Steps")
-
 flow = r"""
 digraph G {
   rankdir=LR;
-  splines=true;
-  nodesep=0.45; ranksep=0.6;
   node [shape=box, style="rounded,filled", penwidth=0, fontname="Helvetica", fontsize=11];
 
-  S0 [label="0 • Overview",             fillcolor="#14b8a6", fontcolor="white"];
-  S1 [label="1 • Data Loading",         fillcolor="#0ea5e9", fontcolor="white"];
+  S0 [label="0 • Overview", fillcolor="#14b8a6", fontcolor="white"];
+  S1 [label="1 • Data Loading", fillcolor="#0ea5e9", fontcolor="white"];
   S2 [label="2 • Data Selection\n(Asheville, NC)", fillcolor="#10b981", fontcolor="white"];
   S3 [label="3 • Preprocessing\nDrop missing price → Clean numerics → Mode-impute superhost", fillcolor="#f59e0b", fontcolor="white"];
   S4 [label="4 • EDA\nDescribe • Distributions • Pairplot • Correlation • Outliers • Map", fillcolor="#8b5cf6", fontcolor="white"];
@@ -136,6 +133,7 @@ digraph G {
 }
 """
 st.graphviz_chart(flow)
+
 
 
 # ====================================================
