@@ -58,51 +58,77 @@ st.caption("Preview (first 5 rows)")
 st.dataframe(df_raw.head(), use_container_width=True)
 
 # ====================================================
-# Section 2 — Data Selection (Asheville, NC focus)
+# Section 2 — Data Selection (Asheville, NC only)
 # ====================================================
 st.header("Section 2 — Data Selection (Asheville, NC)")
 
 df = df_raw.copy()
 
-# 2.1: Isolate Asheville listings — show how we filter
-pre_count = len(df)
-asf_mask = pd.Series(False, index=df.index)
+# --- 2.1 Robust Asheville, NC filter ---
+def asheville_mask(frame: pd.DataFrame) -> pd.Series:
+    n = len(frame)
+    mask_any = pd.Series(False, index=frame.index)
 
-if "city" in df.columns:
-    asf_mask |= df["city"].astype(str).str.contains("Asheville", case=False, na=False)
+    # Text-based city/neighbourhood matches
+    def has(col): return col in frame.columns
+    def contains(col, pat): 
+        return frame[col].astype(str).str.contains(pat, case=False, na=False) if has(col) else pd.Series(False, index=frame.index)
 
-if "state" in df.columns:
-    # Some exports use 2-letter codes; prefer 'NC'
-    asf_mask &= df["state"].astype(str).str.contains("NC|North Carolina", case=False, na=False)
+    city_ashe = contains("city", r"\bAsheville\b")
+    market_ashe = contains("market", r"\bAsheville\b")
+    neigh_ashe = contains("neighbourhood_cleansed", r"\bAsheville\b") | contains("neighbourhood", r"\bAsheville\b")
+    text_ashe = city_ashe | market_ashe | neigh_ashe
 
-# If 'city' isn't present, try neighbourhood-based fallback
-if not asf_mask.any() and "neighbourhood_cleansed" in df.columns:
-    asf_mask |= df["neighbourhood_cleansed"].astype(str).str.contains("Asheville", case=False, na=False)
+    # NC constraint if state exists; otherwise allow
+    if has("state"):
+        state_nc = frame["state"].astype(str).str.upper().str.contains(r"\bNC\b|NORTH CAROLINA", na=False)
+    else:
+        state_nc = pd.Series(True, index=frame.index)  # no state column: don't block
 
-# If still nothing, keep dataset but warn
-if asf_mask.any():
-    df = df[asf_mask].copy()
-    st.info(f"Asheville isolation: kept **{len(df):,}** of **{pre_count:,}** rows (filtered by city/state/neighbourhood cues).")
+    mask_text = text_ashe & state_nc
+
+    # Geo fallback (if no rows from text filter and lat/lon available)
+    if (not mask_text.any()) and has("latitude") and has("longitude"):
+        # Loose bounding box around Asheville
+        lat = pd.to_numeric(frame["latitude"], errors="coerce")
+        lon = pd.to_numeric(frame["longitude"], errors="coerce")
+        geo_box = (lat.between(35.40, 35.82)) & (lon.between(-82.75, -82.25))
+        mask_any = geo_box
+    else:
+        mask_any = mask_text
+
+    return mask_any
+
+mask_ashe = asheville_mask(df)
+
+if mask_ashe.any():
+    kept = int(mask_ashe.sum())
+    st.info(f"Filtered to **Asheville, NC**: kept **{kept:,}** listings.")
+    df = df[mask_ashe].copy()
 else:
-    st.warning("Could not confidently isolate Asheville via common fields. Proceeding with the entire dataset.")
+    st.warning("Could not confidently isolate Asheville via available fields; proceeding with the entire dataset (no filter applied).")
 
-# 2.2: Keep a compact, useful subset of columns
+# --- 2.2 Keep compact, useful subset (numeric + categorical) ---
 present_numeric = [c for c in NUMERIC_KEEP if c in df.columns]
-present_cats = [c for c in CATEGORICAL_KEEP if c in df.columns]
+present_cats    = [c for c in CATEGORICAL_KEEP if c in df.columns]
 
-keep_cols = list(dict.fromkeys(present_numeric + present_cats))  # preserve order
-if TARGET not in keep_cols:
-    keep_cols = [TARGET] + keep_cols
+# Ensure target present first, then selected cols
+keep_cols = list(dict.fromkeys([TARGET] + present_numeric + present_cats))
 df = df[keep_cols].copy()
 
 st.subheader("Columns kept for analysis")
-left, right = st.columns(2)
-with left:
-    st.write("**Numerical:**", [c for c in present_numeric if c in df.columns])
-with right:
-    st.write("**Categorical:**", [c for c in present_cats if c in df.columns])
 
-st.caption("Preview of the selected working frame")
+# Build a two-column table: Numeric | Categorical
+def two_col_table(n_list, c_list):
+    m = max(len(n_list), len(c_list))
+    n_list = n_list + [""] * (m - len(n_list))
+    c_list = c_list + [""] * (m - len(c_list))
+    return pd.DataFrame({"Numeric": n_list, "Categorical": c_list})
+
+cols_tbl = two_col_table(present_numeric, present_cats)
+st.dataframe(cols_tbl, use_container_width=True)
+
+st.caption("Preview of the working dataframe")
 st.dataframe(df.head(), use_container_width=True)
 
 # ====================================================
