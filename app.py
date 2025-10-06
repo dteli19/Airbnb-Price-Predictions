@@ -534,7 +534,7 @@ mse = mean_squared_error(y_test, y_pred)
 rmse = float(np.sqrt(mse))
 r2 = r2_score(y_test, y_pred)
 
-m1, m2, m3m m4 = st.columns(4)
+m1, m2, m3, m4 = st.columns(4)
 m1.metric("MAE", f"{mae:,.2f}")
 m2.metric("MSE", f"{mse:,.2f}")
 m3.metric("RMSE", f"{rmse:,.2f}")
