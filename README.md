@@ -26,7 +26,7 @@ The objective of this project is to **predict nightly prices** based on listing 
 
 ### **Steps Performed**
 
-
+![Workflow](Workflow.png)  
 
 #### **1️⃣ Data Loading**
 - Imported `listings.csv` and verified schema and data consistency.  
@@ -58,9 +58,9 @@ The objective of this project is to **predict nightly prices** based on listing 
 - Trained over 50 epochs with validation split.  
 - Evaluated using **MAE**, **RMSE**, and **R²**.
 
----
-
 ### **Results**
+
+![Training vs Validation](TV.png) 
 
 | **Metric** | **Value** |
 |-------------|--------------------|
@@ -71,22 +71,19 @@ The objective of this project is to **predict nightly prices** based on listing 
 - The model achieved stable convergence, showing consistent training and validation loss curves.  
 - Predicted prices align closely with actual values, capturing location and review-driven variations effectively.
 
----
-
 ### **Business Impact**
+
+![Actual vs Predict](AP.png)
+
 ✅ Enables **dynamic pricing strategies** for Airbnb hosts.  
 ✅ Helps identify **undervalued or overvalued properties** based on their features.  
 ✅ Offers **data-backed insights** for improving property visibility and revenue optimization.  
-
----
 
 ### **Takeaways**
 - **Data quality and missingness handling** critically affect model reliability.  
 - **Mode imputation and normalization** provide stability for mixed-type datasets.  
 - **Location and reviews** emerged as key price determinants.  
 - The workflow can be easily **replicated for any Airbnb city** with minimal code changes.  
-
----
 
 ### **Tech Stack**
 **Python | Pandas | NumPy | Matplotlib | Seaborn | Plotly | TensorFlow (Keras) | Streamlit**
