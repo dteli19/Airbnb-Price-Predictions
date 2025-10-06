@@ -91,7 +91,7 @@ def percentile_cap(s: pd.Series, q=0.99) -> float:
     return float(np.nanpercentile(s.dropna(), q * 100)) if s.notna().any() else np.nan
 
 # ----------------------------------------------------
-Overview, Problem, About the Data, Actions
+# Overview, Problem, About the Data, Actions
 # ----------------------------------------------------
 # Section 0 — Overview, Problem, About the Data, Actions (with flowchart)
 st.markdown("""
