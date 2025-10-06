@@ -209,7 +209,8 @@ with mc2:
 with mc3:
     metric_card("Categorical cols", f"{len(present_cats)}", ", ".join(present_cats) if present_cats else "—", bg="#8b5cf6")
 
-st.subheader("Columns kept for analysis")
+# --- Columns kept for analysis ---
+st.subheader("Columns Kept for Analysis")
 
 def two_col_table(n_list, c_list):
     m = max(len(n_list), len(c_list))
@@ -219,38 +220,34 @@ def two_col_table(n_list, c_list):
 
 cols_tbl = two_col_table(present_numeric, present_cats)
 
-# Render a styled HTML table (st.dataframe ignores Pandas Styler CSS)
-def render_table_html(df, header_bg="#0b1260", header_fg="#ffffff",
-                      even="#0f162a", odd="#111627", font="#e5e7eb"):
-    # Build zebra rows
-    rows_html = []
-    for i, (_, row) in enumerate(df.iterrows()):
-        bg = even if i % 2 == 0 else odd
-        row_html = "".join([f'<td style="padding:8px 10px;color:{font}">{str(val) if val!="" else "&nbsp;"}</td>'
-                            for val in row.values])
-        rows_html.append(f'<tr style="background:{bg}">{row_html}</tr>')
-    rows_html = "\n".join(rows_html)
+# Light pastel styling (soft blue + green)
+styled_cols_tbl = (
+    cols_tbl.style
+    .hide(axis="index")
+    .set_properties(**{
+        "text-align": "left",
+        "font-size": "15px",
+        "background-color": "#f9fafb",  # light gray base
+    })
+    .set_table_styles([
+        {"selector": "th", "props": [
+            ("text-align", "left"),
+            ("background", "#c7ebf0"),  # soft turquoise-blue header
+            ("color", "#0b1220"),
+            ("font-weight", "bold"),
+            ("padding", "8px 10px"),
+            ("border-bottom", "2px solid #a3d5df")
+        ]},
+        {"selector": "td", "props": [
+            ("padding", "8px 10px"),
+            ("border-bottom", "1px solid #e5e7eb")
+        ]}
+    ])
+)
 
-    html = f"""
-    <div style="border-radius:12px;overflow:hidden;border:1px solid rgba(0,0,0,.08);box-shadow:0 6px 20px rgba(0,0,0,.06)">
-      <table style="border-collapse:collapse;width:100%">
-        <thead>
-          <tr style="background:{header_bg};color:{header_fg}">
-            <th style="text-align:left;padding:10px 12px">Numeric</th>
-            <th style="text-align:left;padding:10px 12px">Categorical</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows_html}
-        </tbody>
-      </table>
-    </div>
-    """
-    return html
+st.dataframe(styled_cols_tbl, use_container_width=True)
+st.caption("Numeric and categorical fields retained for modeling and exploratory analysis.")
 
-st.markdown(render_table_html(cols_tbl), unsafe_allow_html=True)
-
-st.caption("A compact, portable feature set — enough signal for modeling while staying robust across different city exports.")
 
 # ====================================================
 # Section 3 — Data Preprocessing
