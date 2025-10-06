@@ -51,7 +51,7 @@ Interpretable baseline metrics and top standardized coefficients to guide iterat
 # ----------------------------
 # Utilities
 # ----------------------------
-DATA_PATH = Path("data/listings.csv")  # <- hardcoded
+DATA_PATH = Path("listings.csv")  # <- hardcoded
 TARGET = "price"
 
 def clean_price_series(s: pd.Series) -> pd.Series:
@@ -76,7 +76,7 @@ def eval_regression(y_true, y_pred):
 # ----------------------------
 st.header("1) Data Loading")
 if not DATA_PATH.exists():
-    st.error("`data/listings.csv` not found. Place your Inside Airbnb file at this path and rerun.")
+    st.error("`listings.csv` not found. Place your Inside Airbnb file at this path and rerun.")
     st.stop()
 
 # robust CSV read
