@@ -534,9 +534,10 @@ mse = mean_squared_error(y_test, y_pred)
 rmse = float(np.sqrt(mse))
 r2 = r2_score(y_test, y_pred)
 
-m1, m2, m3 = st.columns(3)
+m1, m2, m3m m4 = st.columns(4)
 m1.metric("MAE", f"{mae:,.2f}")
-m2.metric("RMSE", f"{rmse:,.2f}")
-m3.metric("R²", f"{r2:.3f}")
+m2.metric("MSE", f"{mse:,.2f}")
+m3.metric("RMSE", f"{rmse:,.2f}")
+m4.metric("R²", f"{r2:.3f}")
 
 st.caption("Notes: MAE/RMSE reflect average error; R² measures explained variance. Training curves show convergence; the map highlights geographic pricing patterns.")
