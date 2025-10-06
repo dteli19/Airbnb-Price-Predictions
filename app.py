@@ -221,7 +221,7 @@ cols_tbl = two_col_table(present_numeric, present_cats)
 
 # Render a styled HTML table (st.dataframe ignores Pandas Styler CSS)
 def render_table_html(df, header_bg="#0b1260", header_fg="#ffffff",
-                      even="#0f172a", odd="#111827", font="#e5e7eb"):
+                      even="#0f162a", odd="#111627", font="#e5e7eb"):
     # Build zebra rows
     rows_html = []
     for i, (_, row) in enumerate(df.iterrows()):
