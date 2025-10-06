@@ -79,7 +79,7 @@ def percentile_cap(s: pd.Series, q=0.99) -> float:
 # ====================================================
 # Section 1 — Data Loading
 # ====================================================
-st.header("Section 1 — Data Loading")
+step_header(1, "Data Loading", "Import Inside Airbnb listings & sanity-check schema", color="#0ea5e9")
 
 if not DATA_PATH.exists():
     st.error("❌ File not found: `listings.csv`. Please add the dataset and rerun.")
@@ -151,7 +151,7 @@ df = df[keep_cols].copy()
 
 st.subheader("Columns kept for analysis")
 
-# Build a two-column table: Numeric | Categorical
+# Two-column table — Numeric | Categorical (styled)
 def two_col_table(n_list, c_list):
     m = max(len(n_list), len(c_list))
     n_list = n_list + [""] * (m - len(n_list))
@@ -159,7 +159,10 @@ def two_col_table(n_list, c_list):
     return pd.DataFrame({"Numeric": n_list, "Categorical": c_list})
 
 cols_tbl = two_col_table(present_numeric, present_cats)
-st.dataframe(cols_tbl, use_container_width=True)
+st.dataframe(
+    cols_tbl.style.set_properties(**{"text-align": "left"}),
+    use_container_width=True
+)
 
 st.caption("Preview of the working dataframe")
 st.dataframe(df.head(), use_container_width=True)
@@ -169,77 +172,70 @@ st.caption("We keep a compact set of numeric & categorical fields to balance mod
 # ====================================================
 # Section 3 — Data Preprocessing
 # ====================================================
-st.header("Section 3 — Data Preprocessing")
+step_header(3, "Data Preprocessing", "Drop missing price → fix types → ensure only superhost is missing → mode-impute", color="#f59e0b")
 
 st.markdown("""
-**What happens here (fixed policy):**
-- **Target safety:** Drop rows with missing **price** (we do *not* impute targets).
-- **Impute categoricals:** Use **mode** for `host_is_superhost` (robust + simple).
-- **Type fixes:** Convert `t`/`f` → booleans; ensure `room_type` is categorical.
-- **Sanity checks:** Show missingness **before** and **after** imputation.
+We enforce the following sequence (to mirror the Colab):
+1) **Drop** rows with missing **price** (we never impute the target).
+2) **Coerce** key numerics to numeric and **drop** any rows where those are still missing — so that **only** `host_is_superhost` remains missing.
+3) **Mode-impute** `host_is_superhost`.
+4) Fix types (convert `'t'/'f'` → `True/False`; keep `room_type` as categorical).
 """)
 
-# 3.1 — Ensure price is numeric, then drop missing targets
-if TARGET not in df.columns:
-    st.error("Column `price` not found in the selected data.")
-    st.stop()
-
+# 3.1 — Drop rows with missing price (no target imputation)
 df[TARGET] = clean_price_series(df[TARGET])
-
-before_drop = len(df)
+before_drop_price = len(df)
 df = df.dropna(subset=[TARGET]).copy()
-after_drop = len(df)
+after_drop_price = len(df)
+st.info(f"🧹 Dropped **{before_drop_price - after_drop_price}** rows with missing `price`; kept **{after_drop_price}** rows.")
 
-st.info(f"🧹 Dropped **{before_drop - after_drop}** rows with missing `price`; kept **{after_drop}** rows.")
+# 3.2 — Coerce numerics & drop rows with missing numerics so only 'host_is_superhost' remains missing
+core_numeric = [c for c in ["bathrooms", "bedrooms", "number_of_reviews", "latitude", "longitude"] if c in df.columns]
 
-# 3.2 — Missingness after dropping price (expecting only `host_is_superhost`)
-st.subheader("Missingness after dropping rows with missing price")
-miss_after_price = (df.isna().mean() * 100).round(2).to_frame("missing_%")
-st.dataframe(miss_after_price, use_container_width=True)
+# coerce to numeric (this can create NaN when cells have non-numeric strings)
+for c in core_numeric:
+    df[c] = pd.to_numeric(df[c], errors="coerce")
+
+before_drop_num = len(df)
+df = df.dropna(subset=core_numeric).copy()
+after_drop_num = len(df)
+if before_drop_num != after_drop_num:
+    st.caption(f"Ensured clean numerics: dropped **{before_drop_num - after_drop_num}** rows with missing {core_numeric}")
+
+# 3.3 — Show missingness *now* (after dropping price + numeric cleanup)
+st.subheader("Missingness after dropping rows with missing price & cleaning numerics")
+miss_now = (df.isna().mean() * 100).round(2).to_frame("missing_%")
+st.dataframe(miss_now.style.format({"missing_%": "{:.2f}"}), use_container_width=True)
 
 st.markdown("""
-_Expectation:_ Only **`host_is_superhost`** should remain with missing values.  
-We’ll fill that with **mode** (most frequent value) to retain sample size without skewing numeric stats.
+At this point, the only expected missingness should be in **`host_is_superhost`** (per Colab).
+We now fill it using **mode imputation** (most frequent value).
 """)
 
-# 3.3 — Mode imputation for `host_is_superhost`
+# 3.4 — Mode imputation for host_is_superhost
 if "host_is_superhost" in df.columns:
-    # keep raw (string) values for mode calculation
-    col = "host_is_superhost"
-    st.caption("Mode imputation for `host_is_superhost`")
-    mode_val = df[col].mode(dropna=True)
+    mode_val = df["host_is_superhost"].mode(dropna=True)
     if not mode_val.empty:
         fill_value = mode_val.iloc[0]
-        df[col] = df[col].fillna(fill_value)
-        st.write(f"Filled missing `{col}` with mode value: **{fill_value!r}**")
+        df["host_is_superhost"] = df["host_is_superhost"].fillna(fill_value)
+        st.success(f"Filled missing `host_is_superhost` with mode: **{fill_value!r}**")
     else:
-        st.write("No non-null values to compute a mode for `host_is_superhost`; leaving as-is.")
+        st.warning("Could not compute a mode for `host_is_superhost` (no non-null values).")
 else:
-    st.info("`host_is_superhost` not present in this dataset — skipping mode imputation for it.")
+    st.info("`host_is_superhost` not present in the dataset.")
 
-# 3.4 — Fix data types and simple encodings
-# Convert t/f-like columns → booleans (True/False)
+# 3.5 — Type fixes
 for c in ["host_identity_verified", "host_is_superhost"]:
     if c in df.columns:
-        df[c] = to_bool_t_f(df[c])
+        df[c] = to_bool_t_f(df[c])  # 't'/'f' → True/False
 
-# Ensure room_type is categorical (helpful for later encoding)
 if "room_type" in df.columns:
     df["room_type"] = df["room_type"].astype("category")
 
-# 3.5 — Missingness after imputation/types
-st.subheader("Missingness after imputation & type fixes")
+# 3.6 — Missingness after imputation (should be all ~0%)
+st.subheader("Missingness after mode-imputation & type fixes")
 miss_final = (df.isna().mean() * 100).round(2).to_frame("missing_%")
-st.dataframe(miss_final, use_container_width=True)
-
-st.markdown("""
-✅ **Status:**  
-- No target imputation performed.  
-- `host_is_superhost` filled with **mode**.  
-- Booleans normalized from **`t`/`f`** where applicable.  
-- Dataset ready for **EDA** and **Modeling**.
-""")
-
+st.dataframe(miss_final.style.format({"missing_%": "{:.2f}"}), use_container_width=True)
 
 # ====================================================
 # Section 4 — Exploratory Data Analysis (EDA)
