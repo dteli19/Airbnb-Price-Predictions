@@ -96,7 +96,7 @@ st.header("Section 3 — Data Modeling Workflow")
 # Step 1: Data Loading
 st.subheader("Step 1: Data Loading")
 if not DATA_PATH.exists():
-    st.error("❌ File not found: `data/listings.csv`. Please add the dataset and rerun.")
+    st.error("❌ File not found: `listings.csv`. Please add the dataset and rerun.")
     st.stop()
 
 df = pd.read_csv(DATA_PATH, low_memory=False)
